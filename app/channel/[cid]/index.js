@@ -5,13 +5,17 @@ import {
     MessageInput,
     MessageList,
     useAttachmentPickerContext,
+    AttachButton
 } from "stream-chat-expo";
 import { Stack, useRouter } from "expo-router";
+import * as FileSystem from 'expo-file-system';
 import { AppContext } from "../../../contexts/AppContext";
 import { useHeaderHeight } from "@react-navigation/elements";
-import StickerPicker from "../../../components/StickerPicker";
-import { IconMoodHappy } from "@tabler/icons-react-native";
 import CustomMessage from "../../../components/CustomMessage";
+import { IconMoodHappy } from "@tabler/icons-react-native";
+import StickerSuggestionBar from "../../../components/StickerSuggestionBar";
+import StickerPanel from "../../../components/sticker_panel/StickerPanel";
+
 
 export default function ChannelScreen() {
     const router = useRouter();
@@ -19,71 +23,55 @@ export default function ChannelScreen() {
     const { setTopInset } = useAttachmentPickerContext();
     const headerHeight = useHeaderHeight();
     const [isStickerPickerVisible, setStickerPickerVisible] = useState(false);
-
-    const stickers = [
-        {
-            id: 'sticker_1',
-            uri: 'https://cdn-icons-png.flaticon.com/512/742/742751.png', // laughing emoji
-        },
-        {
-            id: 'sticker_2',
-            uri: 'https://cdn-icons-png.flaticon.com/512/742/742751.png', // same for demo, change if needed
-        },
-        {
-            id: 'sticker_3',
-            uri: 'https://cdn-icons-png.flaticon.com/512/742/742774.png', // heart eyes emoji
-        },
-        {
-            id: 'sticker_4',
-            uri: 'https://cdn-icons-png.flaticon.com/512/742/742760.png', // thumbs up
-        },
-        {
-            id: 'sticker_5',
-            uri: 'https://cdn-icons-png.flaticon.com/512/6815/6815042.png', // wow emoji
-        },
-        {
-            id: 'sticker_6',
-            uri: 'https://cdn-icons-png.flaticon.com/512/2583/2583117.png', // fire
-        },
-        {
-            id: 'sticker_7',
-            uri: 'https://cdn-icons-png.flaticon.com/512/2583/2583126.png', // sad face
-        },
-        {
-            id: 'sticker_8',
-            uri: 'https://cdn-icons-png.flaticon.com/512/2583/2583106.png', // cool glasses
-        },
-        {
-            id: 'sticker_9',
-            uri: 'https://cdn-icons-png.flaticon.com/512/2583/2583143.png', // love heart
-        },
-        {
-            id: 'sticker_10',
-            uri: 'https://cdn-icons-png.flaticon.com/512/2583/2583115.png', // crying face
-        },
-    ];
+    const [showStickerPanel, setShowStickerPanel] = useState(false);
 
     useEffect(() => {
         setTopInset(headerHeight);
     }, [headerHeight, setTopInset]);
 
-    const handleSendSticker = async (sticker) => {
+    // const handleSendSticker = async (sticker) => {
+    //     try {
+    //         await channel.sendMessage({
+    //             attachments: [
+    //                 {
+    //                     type: 'image',
+    //                     image_url: sticker.remoteUrl,
+    //                     extra_data: {
+    //                         isSticker: true,
+    //                         localPath: sticker.uri,
+    //                         caption: '',
+    //                     },
+    //                 },
+    //             ],
+    //         });
+    //         setStickerPickerVisible(false);
+    //     } catch (error) {
+    //         console.error('Error sending sticker:', error);
+    //         alert('Failed to send sticker');
+    //     }
+    // };
+
+    const handleStickerSend = async (sticker) => {
+        const ext = sticker.uri.split('.').pop();
+        const localPath = `${FileSystem.documentDirectory}stickers/${sticker.packId}/${sticker.id}.${ext}`;
+
         try {
             await channel.sendMessage({
                 attachments: [
                     {
-                        type: 'image', // Use 'image' for stickers
-                        image_url: sticker.uri,
+                        type: 'image',
+                        image_url: sticker.remoteUrl,
                         extra_data: {
-                            isSticker: true, // Custom flag to identify stickers
-                            caption: '', // Optional caption
+                            isSticker: true,
+                            localPath,
+                            caption: '',
                         },
                     },
                 ],
             });
-            setStickerPickerVisible(false);
-        } catch (error) {
-            console.error('Error sending sticker:', error);
+            // setShowStickerPanel(false);
+        } catch (err) {
+            console.error('Failed to send sticker:', err);
         }
     };
 
@@ -106,16 +94,27 @@ export default function ChannelScreen() {
                             router.push(`/channel/${channel.cid}/thread/${thread.cid}`);
                         }}
                     />
-                    <StickerPicker
+
+                    {/* <StickerLibrary
                         visible={isStickerPickerVisible}
                         onClose={() => setStickerPickerVisible(false)}
                         onSelectSticker={handleSendSticker}
-                        stickers={stickers}
+                    /> */}
+
+                    <StickerSuggestionBar channel={channel} />
+
+                    <MessageInput
+                        InputButtons={(props) => (
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <TouchableOpacity onPress={() => setShowStickerPanel(!showStickerPanel)}>
+                                    <IconMoodHappy />
+                                </TouchableOpacity>
+                                <AttachButton {...props} />
+                            </View>
+                        )}
                     />
-                    <TouchableOpacity onPress={() => setStickerPickerVisible(true)}>
-                        <IconMoodHappy />
-                    </TouchableOpacity>
-                    <MessageInput />
+                    <StickerPanel visible={showStickerPanel} setShowStickerPanel={setShowStickerPanel} onSelectSticker={handleStickerSend} />
+
                 </Channel>
             ) : null}
         </SafeAreaView>

@@ -5,20 +5,21 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  Modal,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import { IconSquareRoundedX } from '@tabler/icons-react-native';
+import { stickerPacks } from '../stickerData';
 import { Image } from 'expo-image';
-import { stickerPacks } from '../../stickerData';
 
 const stickerDir = `${FileSystem.documentDirectory}stickers/`;
 
-const StickerItem = ({ sticker, isDownloaded, baseDir }) => {
+const StickerItem = ({ sticker, isDownloaded, baseDir, onSelectSticker }) => {
   const [uri, setUri] = useState(isDownloaded ? null : sticker.url);
 
   useEffect(() => {
-    const getLocalUri = async () => {
+    const getLocalStickerUri = async () => {
       try {
         const files = await FileSystem.readDirectoryAsync(baseDir);
         const file = files.find((f) => f.startsWith(sticker.id));
@@ -28,24 +29,32 @@ const StickerItem = ({ sticker, isDownloaded, baseDir }) => {
       }
     };
 
-    if (isDownloaded) getLocalUri();
+    if (isDownloaded) getLocalStickerUri();
   }, [isDownloaded]);
 
   return (
-    <View style={styles.stickerWrapper}>
+    <TouchableOpacity
+      onPress={() =>
+        isDownloaded &&
+        onSelectSticker({
+          uri: uri,
+          remoteUrl: sticker.url,
+        })
+      }
+    >
       {uri && (
         <Image
           source={{ uri }}
           style={styles.stickerPreview}
-          contentFit="contain"
+          contentFit='contain'
           transition={500}
         />
       )}
-    </View>
+    </TouchableOpacity>
   );
 };
 
-const StickerLibrary = () => {
+const StickerLibrary = ({ visible, onClose, onSelectSticker }) => {
   const [downloadedPacks, setDownloadedPacks] = useState([]);
   const [downloadingPackId, setDownloadingPackId] = useState(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -61,8 +70,8 @@ const StickerLibrary = () => {
       }
     };
 
-    checkDownloadedPacks();
-  }, []);
+    if (visible) checkDownloadedPacks();
+  }, [visible]);
 
   const downloadPack = async (pack) => {
     try {
@@ -80,13 +89,13 @@ const StickerLibrary = () => {
         setDownloadProgress((i + 1) / pack.stickers.length);
       }
 
-      setDownloadedPacks((prev) => [...prev, pack.id]);
+      setDownloadedPacks([...downloadedPacks, pack.id]);
       setDownloadingPackId(null);
       setDownloadProgress(0);
-      Alert.alert('Download Complete', `Downloaded ${pack.name}`);
+      alert(`Downloaded ${pack.name}`);
     } catch (error) {
       console.error('Error downloading pack:', error);
-      Alert.alert('Download Failed', 'Unable to download sticker pack.');
+      alert('Failed to download pack');
       setDownloadingPackId(null);
       setDownloadProgress(0);
     }
@@ -96,7 +105,7 @@ const StickerLibrary = () => {
     try {
       const packDir = `${stickerDir}${packId}/`;
       await FileSystem.deleteAsync(packDir, { idempotent: true });
-      setDownloadedPacks((prev) => prev.filter((id) => id !== packId));
+      setDownloadedPacks(downloadedPacks.filter((id) => id !== packId));
     } catch (err) {
       console.error('Error deleting pack:', err);
     }
@@ -107,10 +116,10 @@ const StickerLibrary = () => {
       await FileSystem.deleteAsync(stickerDir, { idempotent: true });
       await FileSystem.makeDirectoryAsync(stickerDir, { intermediates: true });
       setDownloadedPacks([]);
-      Alert.alert('Stickers Cleared', 'All sticker packs have been removed.');
+      alert('All stickers cleared');
     } catch (err) {
       console.error('Error clearing stickers:', err);
-      Alert.alert('Error', 'Failed to clear stickers');
+      alert('Failed to clear stickers');
     }
   };
 
@@ -141,11 +150,10 @@ const StickerLibrary = () => {
                   sticker={sticker}
                   isDownloaded={isDownloaded}
                   baseDir={baseDir}
+                  onSelectSticker={onSelectSticker}
                 />
               )}
-              showsHorizontalScrollIndicator={false}
             />
-
             {isDownloaded ? (
               <TouchableOpacity
                 style={styles.deleteButton}
@@ -168,44 +176,48 @@ const StickerLibrary = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Sticker Library</Text>
-      <TouchableOpacity style={styles.clearButton} onPress={clearAllStickers}>
-        <Text style={styles.clearText}>Clear All Stickers</Text>
-      </TouchableOpacity>
-
-      <FlatList
-        data={stickerPacks}
-        keyExtractor={(pack) => pack.id}
-        renderItem={renderPack}
-        contentContainerStyle={styles.list}
-      />
-    </View>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.modalContainer}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Sticker Library</Text>
+          <TouchableOpacity onPress={onClose}>
+            <IconSquareRoundedX />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={styles.clearButton} onPress={clearAllStickers}>
+          <Text style={styles.clearText}>Clear All Stickers</Text>
+        </TouchableOpacity>
+        <FlatList
+          data={stickerPacks}
+          keyExtractor={(pack) => pack.id}
+          renderItem={renderPack}
+          contentContainerStyle={styles.list}
+        />
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 100
+    backgroundColor: '#fff',
+    paddingTop: 50,
   },
   header: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
-  list: {
-    paddingBottom: 16,
+  headerText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   packContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
@@ -214,12 +226,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  stickerWrapper: {
-    marginRight: 8,
-  },
   stickerPreview: {
     width: 60,
     height: 60,
+    marginRight: 8,
     borderRadius: 8,
   },
   downloadButton: {
@@ -244,14 +254,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  clearButton: {
-    marginVertical: 12,
-    paddingHorizontal: 16,
-  },
-  clearText: {
-    color: '#FF3B30',
-    fontWeight: '600',
-    textAlign: 'right',
+  list: {
+    paddingBottom: 16,
   },
   downloadingContainer: {
     flexDirection: 'row',
@@ -266,15 +270,3 @@ const styles = StyleSheet.create({
 });
 
 export default StickerLibrary;
-
-// const styles = StyleSheet.create({
-//   background: {
-//     flex: 1,
-//     backgroundColor: 'white',
-//     borderTopLeftRadius: 15,
-//     borderTopRightRadius: 15,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     marginTop: 100
-//   },
-// });
