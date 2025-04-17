@@ -1,4 +1,4 @@
 export const chatApiKey = "dz5f4d5kzrue";
-export const chatUserId = "twilight-wave-3";
-export const chatUserName = "twilight";
-export const chatUserToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidHdpbGlnaHQtd2F2ZS0zIiwiZXhwIjoxNzQ0ODI1NjgzfQ.RZnxIM0K24ya0nIOzehTzyOgyfDVctVeme8lkSd2zO4";
+export const chatUserId = "icy-silence-2";
+export const chatUserName = "icy";
+export const chatUserToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiaWN5LXNpbGVuY2UtMiIsImV4cCI6MTc0NDg4NTk5Nn0.CoyclJhidnSotX0KgiNOmYxNH8au0c3MzNDVTZ-yFJU";

@@ -11,6 +11,7 @@ import { useMessageInputContext } from 'stream-chat-expo';
 import * as FileSystem from 'expo-file-system';
 import { stickerPacks } from '../stickerData';
 import { Image } from 'expo-image';
+import { incrementStickerUsage, getStickerUsage } from '../utils/stickerUsageUtils';
 
 const StickerSuggestionBar = ({ channel }) => {
     const { text, setText } = useMessageInputContext();
@@ -18,20 +19,35 @@ const StickerSuggestionBar = ({ channel }) => {
     const slideAnim = useRef(new Animated.Value(100)).current; // initial Y offset
 
     useEffect(() => {
-        const lastWord = text.trim().split(' ').pop().toLowerCase();
-        if (lastWord.length > 1) {
-            const matched = [];
-            stickerPacks.forEach((pack) => {
-                pack.stickers.forEach((sticker) => {
-                    if (sticker.keywords?.some((k) => k.includes(lastWord))) {
-                        matched.push({ ...sticker, packId: pack.id });
-                    }
+        const fetchSuggestions = async () => {
+            const lastWord = text.trim().split(' ').pop().toLowerCase();
+
+            if (lastWord.length > 1) {
+                const matched = [];
+
+                stickerPacks.forEach((pack) => {
+                    pack.stickers.forEach((sticker) => {
+                        if (sticker.keywords?.some((k) => k.includes(lastWord))) {
+                            matched.push({ ...sticker, packId: pack.id });
+                        }
+                    });
                 });
-            });
-            setSuggestions(matched.slice(0, 6));
-        } else {
-            setSuggestions([]);
-        }
+
+                const usage = await getStickerUsage();
+
+                matched.sort((a, b) => {
+                    const usageA = usage[a.id] || 0;
+                    const usageB = usage[b.id] || 0;
+                    return usageB - usageA;
+                });
+
+                setSuggestions(matched.slice(0, 6));
+            } else {
+                setSuggestions([]);
+            }
+        };
+
+        fetchSuggestions();
     }, [text]);
 
     useEffect(() => {
@@ -44,7 +60,6 @@ const StickerSuggestionBar = ({ channel }) => {
 
     const handleStickerSend = async (sticker) => {
         try {
-            // Extract original extension from URL
             const extension = sticker.url.split('.').pop().split(/\#|\?/)[0];
             const localPath = `${FileSystem.documentDirectory}stickers/${sticker.packId}/${sticker.id}.${extension}`;
 
@@ -62,6 +77,7 @@ const StickerSuggestionBar = ({ channel }) => {
                 ],
             });
 
+            await incrementStickerUsage(sticker.id);
             setText('');
             setSuggestions([]);
         } catch (err) {
@@ -111,7 +127,6 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderColor: 'transparent',
         paddingVertical: 6,
-        // zIndex: 1,
         elevation: 5,
     },
     list: {

@@ -24,10 +24,10 @@ export const ChatWrapper = ({ children }) => {
 
     if (!chatClient) {
         return (
-            // <LoadingScreen />
-            <SafeAreaView>
-                <Text>Loading chat...</Text>
-            </SafeAreaView>
+            <LoadingScreen />
+            // <SafeAreaView>
+            //     <Text>Loading chat...</Text>
+            // </SafeAreaView>
         );
     }
 
