@@ -4,12 +4,12 @@ import * as FileSystem from 'expo-file-system';
 import { MessageSimple, useMessageContext } from 'stream-chat-expo';
 import { Image } from 'expo-image';
 
-const StickerMessage = () => {
+const CustomStickerAttachment = () => {
   const { message, isMyMessage, onLongPress } = useMessageContext();
   const [localUri, setLocalUri] = useState(null);
 
   const stickerAttachment = message.attachments?.find(
-    (att) => att?.type === 'image' && att?.extra_data?.isSticker
+    (att) => att.type === 'image' && att.extra_data?.isSticker
   );
 
   const stickerDir = `${FileSystem.documentDirectory}stickers/received/`;
@@ -22,7 +22,7 @@ const StickerMessage = () => {
       const fileName = remoteUrl?.split('/').pop();
       const localPath = `${stickerDir}${fileName}`;
 
-      if (stickerAttachment?.extra_data?.localPath) {
+      if (stickerAttachment.extra_data?.localPath) {
         setLocalUri(stickerAttachment.extra_data.localPath);
         return;
       }
@@ -38,18 +38,22 @@ const StickerMessage = () => {
         setLocalUri(localPath);
       } catch (error) {
         console.error('Error downloading sticker:', error);
-        setLocalUri(remoteUrl); // fallback
+        setLocalUri(remoteUrl); // fallback to remote if download fails
       }
     };
 
     downloadSticker();
   }, [stickerAttachment]);
 
-  if (!stickerAttachment) return null;
-  if (stickerAttachment) message.text = 'Sticker';
+  if (!stickerAttachment) return <MessageSimple />;
+
+  message.text = 'Sticker';
 
   return (
-    <Pressable onLongPress={() => onLongPress?.()} delayLongPress={300}>
+    <Pressable
+      onLongPress={() => onLongPress?.()}
+      delayLongPress={300}
+    >
       <View
         style={[
           styles.stickerContainer,
@@ -72,25 +76,12 @@ const StickerMessage = () => {
   );
 };
 
-const CustomMessage = (props) => {
-  const { message } = useMessageContext();
-  const isSticker = message.attachments?.some(
-    (att) => att?.type === 'image' && att?.extra_data?.isSticker
+const CustomMessage = () => {
+  return (
+    <MessageSimple
+      MessageContent={CustomStickerAttachment}
+    />
   );
-
-  if (isSticker) {
-    // Render MessageSimple but with our custom content
-    return (
-      <MessageSimple
-        {...props}
-        MessageContent={StickerMessage}
-        reactionListPosition='bottom'
-      />
-    );
-  }
-
-  // Default fallback for other message types
-  return <MessageSimple {...props} reactionListPosition='bottom' />;
 };
 
 const styles = StyleSheet.create({

@@ -23,8 +23,6 @@ export const addToRecentStickers = async (sticker) => {
 export const loadRecentStickers = async () => {
     try {
         const json = await AsyncStorage.getItem(STORAGE_KEY);
-        console.log('JSON.parse(json)----', JSON.parse(json));
-        
         return json ? JSON.parse(json) : [];
     } catch (e) {
         console.error('Failed to load recent stickers:', e);
